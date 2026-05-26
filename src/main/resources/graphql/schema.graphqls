@@ -1,0 +1,343 @@
+enum RoomSortType {
+  ASCE
+  DESC
+}
+# Define a scalar type for JSON
+scalar JSON
+scalar BigDecimal
+scalar Date
+
+enum FilterType {
+  RANGE
+  CHECKBOX
+  MULTI_SELECT
+  DROPDOWN
+}
+
+enum MealPlan {
+  ALL_INCLUSIVE
+  FULL_BOARD
+  HALF_BOARD
+  ROOM_ONLY
+}
+
+type Query {
+  tenantConfig(tenant: String!): TenantConfigResponse!
+
+  calendar(propertyId: ID!): [CalendarDayPrice!]!
+  minPriceForDateRange(
+    propertyId: ID!
+    startDate: Date!
+    endDate: Date!
+  ): BigDecimal!
+
+  promoDiscount(tenantId: ID!, propertyId: ID!, promoCode: String!): PromoCodeResponse
+  availableRoomTypes(
+    request: AvailableRoomTypesInput!
+  ): AvailableRoomTypesResponse!
+  roomTypeDetail(
+    tenantId: ID!
+    propertyId: ID!
+    roomTypeId: ID!
+    checkInDate: Date!
+    checkOutDate: Date!
+    requiredRooms: Int!
+  ): RoomTypeDetailResponse!
+  fetchCheckoutItinerary(
+    args: FetchCheckoutItineraryInput!
+  ): CheckoutItineraryResponse!
+
+  booking(tenantId: ID!, bookingId: ID!): BookingResponse!
+}
+
+input AvailableRoomTypesInput {
+  tenantId: ID!
+  propertyId: ID!
+  checkInDate: Date!
+  checkOutDate: Date!
+  requiredRooms: Int!
+  requestedGuests: Int!
+  page: Int
+  size: Int
+  appliedFilters: [AppliedFilterInput!]
+  sortType: RoomSortType
+}
+
+input AppliedFilterInput {
+  filterId: ID!
+  selectedRange: RangeFilterInput
+  selectedValues: [String!]
+}
+
+input FetchCheckoutItineraryInput {
+  tenantId: ID!
+  propertyId: ID!
+  roomTypeId: ID!
+  checkInDate: Date!
+  checkOutDate: Date!
+  packageChosen: String!
+  roomCount: Int!
+}
+
+input RangeFilterInput {
+  min: BigDecimal
+  max: BigDecimal
+}
+
+type CalendarDayPrice {
+  date: Date!
+  minPrice: BigDecimal!
+}
+
+type TenantConfigResponse {
+  tenantId: ID!
+  tenantLogo: String
+  tenantImage: String
+  maxRooms: Int
+  accessibility: Boolean
+  maxCapacityPerRoom: Int
+  maxBookingRange: Int
+  guests: JSON
+  properties: [Property!]!
+}
+
+type Property {
+  propertyId: ID!
+  propertyName: String!
+}
+
+type PromoCodeResponse {
+  valid: Boolean!
+  promoName: String
+  promoDescription: String
+  promoCode: String
+  discountPercentage: Float
+}
+type PackageResponse {
+  name: String!
+  desc: String!
+  price: BigDecimal!
+}
+
+type RoomTypeDetailResponse {
+  propertyId: ID!
+  roomTypeName: String!
+  description: String
+  maxOccupancy: Int!
+  bedTypes: JSON!
+  area: Int!
+  amenities: [AmenitySummary!]!
+  standardRate: StandardRateResponse!
+  imageUrls: [String!]!
+  mealPlan: MealPlan
+  packages: [PackageResponse!]!
+}
+
+type CheckoutItineraryResponse {
+  roomName: String!
+  staySummary: String!
+  appliedPackage: String!
+  nightlyRate: BigDecimal!
+  roomCount: Int!
+  subtotal: BigDecimal!
+  taxesAndCharges: BigDecimal!
+  dueNow: BigDecimal!
+  dueAtResort: BigDecimal!
+  appliedPromotion: AppliedPromotion
+  rateBreakdown: RateBreakdown!
+}
+
+type AppliedPromotion {
+  title: String!
+  description: String!
+}
+
+type RateBreakdown {
+  entries: [RateBreakdownEntry!]!
+  roomTotal: BigDecimal!
+  taxesAndCharges: [TaxChargeEntry!]!
+  dueNow: BigDecimal!
+  dueAtResort: BigDecimal!
+}
+
+type RateBreakdownEntry {
+  label: String!
+  amount: BigDecimal!
+}
+
+type TaxChargeEntry {
+  label: String!
+  amount: BigDecimal!
+}
+
+type AvailableRoomTypesResponse {
+  searchCriteria: RoomAvailabilitySearchCriteria!
+  filters: [PropertyFilterDefinition!]!
+  roomTypes: [AvailableRoomTypeSummary!]!
+  pageInfo: PageInfo!
+}
+
+type RoomAvailabilitySearchCriteria {
+  propertyId: ID!
+  checkInDate: Date!
+  checkOutDate: Date!
+  requiredRooms: Int!
+  requestedGuests: Int!
+}
+
+type PropertyFilterDefinition {
+  filterId: ID!
+  filterName: String!
+  filterType: FilterType!
+  rangeConfig: PropertyRangeFilterConfig
+  options: [FilterOption!]!
+}
+
+type PropertyRangeFilterConfig {
+  min: BigDecimal
+  max: BigDecimal
+  step: BigDecimal
+  unit: String
+  currency: String
+}
+
+type FilterOption {
+  label: String!
+  value: String!
+}
+
+type AvailableRoomTypeSummary {
+  roomTypeId: ID!
+  roomTypeName: String!
+  area: Int!
+  maxOccupancy: Int!
+  bedTypes: JSON!
+  basePrice: BigDecimal!
+  amenities: [AmenitySummary!]!
+  imageUrls: [String!]!
+  mealPlan: MealPlan
+}
+
+type PageInfo {
+  page: Int!
+  size: Int!
+  totalElements: Int!
+  totalPages: Int!
+  hasNext: Boolean!
+  hasPrevious: Boolean!
+}
+
+type AmenitySummary {
+  amenityId: ID!
+  amenityName: String!
+}
+
+type StandardRateResponse {
+  name: String!
+  description: String!
+  price: BigDecimal!
+}
+
+type Mutation {
+  createBooking(input: CreateBookingInput!): BookingResponse!
+}
+
+input CreateBookingInput {
+  tenantId: ID!
+  propertyId: ID!
+  roomTypeId: ID!
+  checkInDate: Date!
+  checkOutDate: Date!
+  roomCount: Int!
+  packageChosen: String!
+  guests: JSON!
+
+  traveler: TravelerInput!
+  billing: BillingInput!
+  payment: PaymentInput!
+
+  pricing: BookingPricingInput!
+}
+
+input TravelerInput {
+  firstName: String!
+  lastName: String
+  phone: String!
+  email: String!
+}
+
+input BillingInput {
+  firstName: String!
+  lastName: String
+  address1: String!
+  address2: String
+  country: String!
+  state: String!
+  city: String!
+  zip: String!
+  phone: String!
+  email: String!
+}
+
+input PaymentInput {
+  cardNumber: String!
+  expMonth: String!
+  expYear: String!
+}
+
+input BookingPricingInput {
+  subtotal: BigDecimal!
+  taxesAndCharges: BigDecimal!
+  dueAtResort: BigDecimal!
+  dueNow: BigDecimal
+  currency: String!
+}
+
+type BookingResponse {
+  bookingId: ID!
+  status: String!
+  roomTypeName: String!
+  imageUrls: [String!]!
+  guests: JSON!
+  checkInDate: Date!
+  checkOutDate: Date!
+  traveler: TravelerResponse!
+  billing: BillingResponse!
+  payment: PaymentResponse!
+  pricing: PricingResponse!
+}
+
+type TravelerResponse {
+  firstName: String!
+  lastName: String
+  phone: String!
+  email: String!
+}
+
+type BillingResponse {
+  firstName: String!
+  lastName: String
+  address1: String!
+  address2: String
+  country: String!
+  state: String!
+  city: String!
+  zip: String!
+  phone: String!
+  email: String!
+}
+
+type PaymentResponse {
+  paymentId: ID!
+  status: String!
+  paymentMethod: String!
+  lastFourDigits: String!
+}
+
+type PricingResponse {
+  subtotal: BigDecimal!
+  taxesAndCharges: BigDecimal!
+  dueAtResort: BigDecimal!
+  dueNow: BigDecimal
+  currency: String!
+}
